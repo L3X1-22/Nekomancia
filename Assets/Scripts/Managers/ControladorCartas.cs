@@ -8,6 +8,8 @@ public class ControladorCartas : MonoBehaviour
     //private Combat combat;
     private List<int> deck = new List<int>();
     private int cantidad = 0;
+    public GameObject demonio;
+    public GameObject portal;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -30,7 +32,9 @@ public class ControladorCartas : MonoBehaviour
         cantidad = deck.Count;
         if (cantidad >= 3)
         {
-            Debug.Log("HEMOS MATADO A 3");
+            demonio.SetActive(true);
+            portal.SetActive(true);
+            //Debug.Log("HEMOS MATADO A 3");
         }
     }
 
