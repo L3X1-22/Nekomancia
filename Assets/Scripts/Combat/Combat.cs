@@ -149,6 +149,7 @@ public class Combat : MonoBehaviour
             else
                 Debug.LogWarning($"No se encontró sprite para la carta {playerCardId}");
                 
+            // Rotar la carta si está invertida (180 grados = de cabeza)
             playerCardImage.transform.rotation = Quaternion.Euler(0, 0, isPlayerCardInverted ? 180 : 0);
         }
     }

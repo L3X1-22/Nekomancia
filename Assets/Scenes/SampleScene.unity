@@ -1373,6 +1373,7 @@ MonoBehaviour:
   - {fileID: 1018205645}
   invertButton: {fileID: 1516190357}
   changeCardButton: {fileID: 1651816232}
+  messageDisplayTime: 2
 --- !u!114 &798470012
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3717,7 +3718,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 868b04b928c8e7544877a93e05849786, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 90
+  moveSpeed: 200
 --- !u!212 &1748056949
 SpriteRenderer:
   m_ObjectHideFlags: 0
