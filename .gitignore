@@ -1,0 +1,68 @@
+# =========================
+# Unity 6.0 LTS .gitignore
+# =========================
+
+# Archivos y carpetas generadas por Unity
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+
+# Cachés de compilación y dependencias generadas
+MemoryCaptures/
+sysinfo.txt
+*.pidb
+*.suo
+*.user
+*.userprefs
+*.csproj
+*.unityproj
+*.sln
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Configuración local del editor
+.vscode/
+.idea/
+*.booproj
+
+# Configuración de Rider
+*.DotSettings.user
+
+# Asset Store
+*.unitypackage
+
+# Archivos de registro
+*.log
+
+# Builds y exportaciones
+*.apk
+*.aab
+*.xcodeproj
+*.xcworkspace
+*.xcuserstate
+*.ipa
+*.exe
+*.app
+*.app.dSYM
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos de pruebas automáticas
+TestResults/
+*.coverage
+*.coveragexml
+
+# Archivos temporales de iluminación y baking
+LightmapSnapshot*
+LightingData.asset
+*.giparams
