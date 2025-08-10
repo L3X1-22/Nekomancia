@@ -133,8 +133,35 @@ public class Combat : MonoBehaviour
     {
         if (playerDeck.Count == 0) return;
 
-        playerCardId = playerDeck[Random.Range(0, playerDeck.Count)];
+        // Crear lista de cartas disponibles excluyendo la carta actual
+        List<int> availableCards = new List<int>();
+        foreach (int cardId in playerDeck)
+        {
+            if (cardId != playerCardId) // Excluir la carta que ya tenemos
+                availableCards.Add(cardId);
+        }
+
+        // Si no hay otras cartas disponibles, mantener la actual
+        if (availableCards.Count == 0)
+        {
+            Debug.Log("No hay otras cartas disponibles, manteniendo la carta actual");
+            // Solo cambiar si está invertida o no
+            isPlayerCardInverted = Random.Range(0, 2) == 1;
+            LoadPlayerMoves();
+            UpdatePlayerCardUI();
+            return;
+        }
+
+        // Seleccionar carta aleatoria de las disponibles
+        playerCardId = availableCards[Random.Range(0, availableCards.Count)];
+        
+        // Determinar aleatoriamente si la nueva carta está invertida
         isPlayerCardInverted = Random.Range(0, 2) == 1;
+        
+        Debug.Log($"Nueva carta seleccionada: ID {playerCardId}, Invertida: {isPlayerCardInverted}");
+        Debug.Log($"Cartas disponibles eran: {string.Join(", ", availableCards)}");
+        
+        // Cargar movimientos y actualizar UI
         LoadPlayerMoves();
         UpdatePlayerCardUI();
     }
@@ -195,6 +222,9 @@ public class Combat : MonoBehaviour
 
     private void SetupEnemyCard()
     {
+        // Determinar si la carta enemiga está invertida (para variedad visual)
+        bool isEnemyCardInverted = Random.Range(0, 2) == 1;
+        
         if (enemyCardImage != null)
         {
             Sprite cardSprite = LoadCardSprite(enemyCardId);
@@ -202,6 +232,9 @@ public class Combat : MonoBehaviour
                 enemyCardImage.sprite = cardSprite;
             else
                 Debug.LogWarning($"No se encontró sprite para la carta {enemyCardId}");
+                
+            // Rotar la carta enemiga si está invertida (50% de probabilidad)
+            enemyCardImage.transform.rotation = Quaternion.Euler(0, 0, isEnemyCardInverted ? 180 : 0);
         }
     }
 
