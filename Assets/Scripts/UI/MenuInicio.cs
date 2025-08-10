@@ -3,13 +3,31 @@ using UnityEngine.SceneManagement;
 
 public class MenuInicio : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+
+    public GameObject quitar;
+    public GameObject howtoplay;
+    public GameObject boton;
+
+
     public void Game()
     {
         SceneManager.LoadScene("SampleScene");
     }
 
-    // Update is called once per frame
+    public void HowToPlay()
+    {
+        quitar.SetActive(false);
+        howtoplay.SetActive(true);
+        boton.SetActive(true);
+    }
+
+    public void Resume()
+    {
+        quitar.SetActive(true);
+        howtoplay.SetActive(false);
+        boton.SetActive(false);
+    }
+
     public void Exit()
     {
         Debug.Log("Saliendo...");
