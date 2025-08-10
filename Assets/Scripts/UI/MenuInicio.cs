@@ -6,7 +6,7 @@ public class MenuInicio : MonoBehaviour
 
     public GameObject quitar;
     public GameObject howtoplay;
-    public GameObject boton;
+    public GameObject galeria;
 
 
     public void Game()
@@ -18,14 +18,19 @@ public class MenuInicio : MonoBehaviour
     {
         quitar.SetActive(false);
         howtoplay.SetActive(true);
-        boton.SetActive(true);
+    }
+
+    public void Galeria()
+    {
+        quitar.SetActive(false);
+        galeria.SetActive(true);
     }
 
     public void Resume()
     {
         quitar.SetActive(true);
         howtoplay.SetActive(false);
-        boton.SetActive(false);
+        galeria.SetActive(false);
     }
 
     public void Exit()
