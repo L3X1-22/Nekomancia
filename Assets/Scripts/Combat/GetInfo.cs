@@ -40,10 +40,15 @@ public class Getinfo : MonoBehaviour
     {
         [PrimaryKey, AutoIncrement]
         public int id { get; set; }
+
+        [NotNull]
         public string nombre { get; set; }
+
         public int fuerte_contra { get; set; }
+
         public int debil_contra { get; set; }
     }
+
 
     public class progreso
     {
@@ -67,7 +72,7 @@ public class Getinfo : MonoBehaviour
 
         db = new SQLiteConnection(persistentPath);
     }
-    
+
     public string[] CargarDatosEnemigoConCarta(int enemyID)
     {
         // Buscar enemigo
@@ -96,7 +101,7 @@ public class Getinfo : MonoBehaviour
     public List<int> ObtenerMazoJugador()
     {
         List<int> mazo = new List<int>();
-        
+
         var progreso = db.Table<progreso>().ToList();
         foreach (var p in progreso)
         {
@@ -106,7 +111,7 @@ public class Getinfo : MonoBehaviour
                 mazo.Add(enemigo.carta_id);
             }
         }
-        
+
         return mazo;
     }
 }

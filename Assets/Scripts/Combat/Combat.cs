@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Linq;
 
 public class Combat : MonoBehaviour
 {
@@ -28,12 +29,21 @@ public class Combat : MonoBehaviour
     private int enemyHealth;
     private int playerCardId;
     private int enemyCardId;
-    private int enemyID; 
+    private int enemyID;
     private bool isPlayerCardInverted;
 
+    //info para cerrar la pelea
+/*     public GameObject blurVolume;
+    public GameObject canvasCombate;
+ */
     private List<int> playerDeck = new List<int>();
     private List<int> currentPlayerMoves = new List<int>();
     private string enemyPhrase;
+
+    public class TablaInfo
+    {
+        public string name { get; set; }
+    }
 
     void Start()
     {
@@ -70,14 +80,18 @@ public class Combat : MonoBehaviour
             return;
         }
 
-        var enemigo = getInfo.db.Table<Getinfo.enemigos>().FirstOrDefault(e => e.id == enemyID);
-        if (enemigo != null)
-            enemyCardId = enemigo.carta_id;
+        var enemigos = getInfo.db.Query<Getinfo.enemigos>("SELECT * FROM enemigos WHERE id = ?", enemyID);
+        if (enemigos.Count > 0)
+            enemyCardId = enemigos[0].carta_id;
         else
             Debug.LogError("No se encontró enemigo con ID " + enemyID);
 
         playerHealth = 100;
         enemyHealth = 100;
+
+       /*  //para depurar uwu
+        var tablas = getInfo.db.Query<Getinfo.movimientos>("SELECT * FROM movimientos");
+        foreach (var t in tablas) Debug.Log(t.nombre); */
 
         LoadPlayerDeck();
         SelectRandomPlayerCard();
@@ -92,12 +106,12 @@ public class Combat : MonoBehaviour
         playerDeck.Clear();
         playerDeck.Add(1); // Carta "El Loco" siempre presente
 
-        var defeatedEnemies = getInfo.db.Table<Getinfo.progreso>().ToList();
+        var defeatedEnemies = getInfo.db.Query<Getinfo.progreso>("SELECT * FROM progreso");
         foreach (var enemy in defeatedEnemies)
         {
-            var enemigo = getInfo.db.Table<Getinfo.enemigos>().FirstOrDefault(e => e.id == enemy.enemigo_id);
-            if (enemigo != null)
-                playerDeck.Add(enemigo.carta_id);
+            var enemigos = getInfo.db.Query<Getinfo.enemigos>("SELECT * FROM enemigos WHERE id = ?", enemy.enemigo_id);
+            if (enemigos.Count > 0)
+                playerDeck.Add(enemigos[0].carta_id);
         }
     }
 
@@ -114,21 +128,27 @@ public class Combat : MonoBehaviour
     {
         currentPlayerMoves.Clear();
 
-        var carta = getInfo.db.Table<Getinfo.cartas>().FirstOrDefault(c => c.id == playerCardId);
-        if (carta == null) return;
+        var cartas = getInfo.db.Query<Getinfo.cartas>("SELECT * FROM cartas WHERE id = ?", playerCardId);
+        if (cartas.Count == 0) return;
 
+        var carta = cartas[0];
         int setId = isPlayerCardInverted ? carta.set_mov_invertidos : carta.set_mov_normales;
-        var set = getInfo.db.Table<Getinfo.set_movimientos>().FirstOrDefault(s => s.id == setId);
-        if (set != null)
+        
+        var sets = getInfo.db.Query<Getinfo.set_movimientos>("SELECT * FROM set_movimientos WHERE id = ?", setId);
+        if (sets.Count > 0)
+        {
+            var set = sets[0];
             currentPlayerMoves.AddRange(new[] { set.mov1, set.mov2, set.mov3 });
+        }
 
         for (int i = 0; i < attackButtons.Length; i++)
         {
             if (i < currentPlayerMoves.Count)
             {
-                var move = getInfo.db.Table<Getinfo.movimientos>().FirstOrDefault(m => m.id == currentPlayerMoves[i]);
-                if (move != null)
+                var movimientos = getInfo.db.Query<Getinfo.movimientos>("SELECT * FROM movimientos WHERE id = ?", currentPlayerMoves[i]);
+                if (movimientos.Count > 0)
                 {
+                    var move = movimientos[0];
                     var btnText = attackButtons[i].GetComponentInChildren<TMP_Text>();
                     if (btnText != null)
                         btnText.text = move.nombre;
@@ -148,14 +168,14 @@ public class Combat : MonoBehaviour
         if (enemyDialogueText != null)
             enemyDialogueText.text = enemyPhrase;
 
-        if (enemyCardImage != null)
+       /*  if (enemyCardImage != null)
         {
             Sprite cardSprite = Resources.Load<Sprite>($"Cartas/{enemyCardId}");
             if (cardSprite != null)
                 enemyCardImage.sprite = cardSprite;
             else
                 Debug.LogWarning($"No se encontró sprite para la carta {enemyCardId}");
-        }
+        } */
     }
 
     public void InvertCard()
@@ -184,9 +204,10 @@ public class Combat : MonoBehaviour
         if (moveIndex < 0 || moveIndex >= currentPlayerMoves.Count) return;
 
         int moveId = currentPlayerMoves[moveIndex];
-        var movimiento = getInfo.db.Table<Getinfo.movimientos>().FirstOrDefault(m => m.id == moveId);
-        if (movimiento == null) return;
+        var movimientos = getInfo.db.Query<Getinfo.movimientos>("SELECT * FROM movimientos WHERE id = ?", moveId);
+        if (movimientos.Count == 0) return;
 
+        var movimiento = movimientos[0];
         int damage = CalculateDamage(movimiento);
         enemyHealth -= damage;
 
@@ -203,9 +224,10 @@ public class Combat : MonoBehaviour
 
     private int CalculateDamage(Getinfo.movimientos movimiento)
     {
-        var cartaEnemiga = getInfo.db.Table<Getinfo.cartas>().FirstOrDefault(c => c.id == enemyCardId);
-        if (cartaEnemiga == null) return 20;
+        var cartas = getInfo.db.Query<Getinfo.cartas>("SELECT * FROM cartas WHERE id = ?", enemyCardId);
+        if (cartas.Count == 0) return 20;
 
+        var cartaEnemiga = cartas[0];
         if (movimiento.fuerte_contra == cartaEnemiga.id) return 40;
         if (movimiento.debil_contra == cartaEnemiga.id) return 10;
         return 20;
@@ -213,26 +235,31 @@ public class Combat : MonoBehaviour
 
     private void EnemyTurn()
     {
-        var cartaEnemiga = getInfo.db.Table<Getinfo.cartas>().FirstOrDefault(c => c.id == enemyCardId);
-        if (cartaEnemiga == null) return;
+        var cartas = getInfo.db.Query<Getinfo.cartas>("SELECT * FROM cartas WHERE id = ?", enemyCardId);
+        if (cartas.Count == 0) return;
 
-        var setEnemigo = getInfo.db.Table<Getinfo.set_movimientos>().FirstOrDefault(s => s.id == cartaEnemiga.set_mov_normales);
-        if (setEnemigo == null) return;
+        var cartaEnemiga = cartas[0];
+        var sets = getInfo.db.Query<Getinfo.set_movimientos>("SELECT * FROM set_movimientos WHERE id = ?", cartaEnemiga.set_mov_normales);
+        if (sets.Count == 0) return;
 
+        var setEnemigo = sets[0];
         List<int> enemyMoves = new List<int> { setEnemigo.mov1, setEnemigo.mov2, setEnemigo.mov3 };
         int randomMoveId = enemyMoves[Random.Range(0, enemyMoves.Count)];
-        var movimientoEnemigo = getInfo.db.Table<Getinfo.movimientos>().FirstOrDefault(m => m.id == randomMoveId);
+        
+        var movimientos = getInfo.db.Query<Getinfo.movimientos>("SELECT * FROM movimientos WHERE id = ?", randomMoveId);
 
         int damage = 20;
-        if (movimientoEnemigo != null)
+        if (movimientos.Count > 0)
         {
-            var playerCard = getInfo.db.Table<Getinfo.cartas>().FirstOrDefault(c => c.id == playerCardId);
-            if (playerCard != null)
+            var movimientoEnemigo = movimientos[0];
+            var cartasJugador = getInfo.db.Query<Getinfo.cartas>("SELECT * FROM cartas WHERE id = ?", playerCardId);
+            if (cartasJugador.Count > 0)
             {
                 if (movimientoEnemigo.fuerte_contra == playerCardId) damage = 40;
                 else if (movimientoEnemigo.debil_contra == playerCardId) damage = 10;
             }
         }
+        
         playerHealth -= damage;
 
         if (playerHealth <= 0)
@@ -252,6 +279,7 @@ public class Combat : MonoBehaviour
 
     private void EndCombat(bool playerWon)
     {
+
         if (playerWon)
         {
             Debug.Log("¡Victoria!");
@@ -267,6 +295,7 @@ public class Combat : MonoBehaviour
             Debug.Log("Derrota...");
         }
 
-        GetComponent<CloseFight>()?.TerminarCombate();
+        var closefight = GetComponent<CloseFight>();
+        closefight.TerminarCombate();
     }
 }

@@ -27,7 +27,7 @@ public class CombatManager : MonoBehaviour
         canvasCombate.SetActive(true);
 
         combat.StartCombat(datosEnemigo);
-        closeFight.TerminarCombate();
+        //closeFight.TerminarCombate();
         Debug.Log("Combate terminado");
     }
 }
