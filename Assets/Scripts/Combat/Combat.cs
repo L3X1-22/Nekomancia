@@ -1,8 +1,8 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Linq;
 
 public class Combat : MonoBehaviour
 {
@@ -21,6 +21,9 @@ public class Combat : MonoBehaviour
     public Button invertButton;
     public Button changeCardButton;
 
+    [Header("Configuración de Mensajes")]
+    public float messageDisplayTime = 2f;
+
     // Base de datos
     private Getinfo getInfo;
 
@@ -32,13 +35,10 @@ public class Combat : MonoBehaviour
     private int enemyID;
     private bool isPlayerCardInverted;
 
-    //info para cerrar la pelea
-/*     public GameObject blurVolume;
-    public GameObject canvasCombate;
- */
     private List<int> playerDeck = new List<int>();
     private List<int> currentPlayerMoves = new List<int>();
     private string enemyPhrase;
+    private bool isPlayerTurn = true;
 
     public class TablaInfo
     {
@@ -55,13 +55,13 @@ public class Combat : MonoBehaviour
         }
 
         // Eventos de botones
-        invertButton.onClick.AddListener(InvertCard);
-        changeCardButton.onClick.AddListener(ChangeCard);
+        invertButton.onClick.AddListener(() => StartCoroutine(HandleInvertCard()));
+        changeCardButton.onClick.AddListener(() => StartCoroutine(HandleChangeCard()));
 
         for (int i = 0; i < attackButtons.Length; i++)
         {
             int index = i;
-            attackButtons[i].onClick.AddListener(() => Attack(index));
+            attackButtons[i].onClick.AddListener(() => StartCoroutine(HandleAttack(index)));
         }
     }
 
@@ -89,16 +89,30 @@ public class Combat : MonoBehaviour
         playerHealth = 100;
         enemyHealth = 100;
 
-       /*  //para depurar uwu
-        var tablas = getInfo.db.Query<Getinfo.movimientos>("SELECT * FROM movimientos");
-        foreach (var t in tablas) Debug.Log(t.nombre); */
-
         LoadPlayerDeck();
         SelectRandomPlayerCard();
         SetupEnemyCard();
         UpdateUI();
+        
+        StartCoroutine(ShowInitialMessage());
 
         Debug.Log("¡Combate iniciado!");
+    }
+
+    private IEnumerator ShowInitialMessage()
+    {
+        DisableAllButtons();
+        
+        if (enemyDialogueText != null)
+            enemyDialogueText.text = "¡El combate ha comenzado! Elige tu movimiento.";
+        
+        yield return new WaitForSecondsRealtime(messageDisplayTime);
+        
+        if (enemyDialogueText != null)
+            enemyDialogueText.text = enemyPhrase;
+            
+        EnableAllButtons();
+        isPlayerTurn = true;
     }
 
     private void LoadPlayerDeck()
@@ -122,6 +136,21 @@ public class Combat : MonoBehaviour
         playerCardId = playerDeck[Random.Range(0, playerDeck.Count)];
         isPlayerCardInverted = Random.Range(0, 2) == 1;
         LoadPlayerMoves();
+        UpdatePlayerCardUI();
+    }
+
+    private void UpdatePlayerCardUI()
+    {
+        if (playerCardImage != null)
+        {
+            Sprite cardSprite = Resources.Load<Sprite>($"Cartas/{playerCardId}");
+            if (cardSprite != null)
+                playerCardImage.sprite = cardSprite;
+            else
+                Debug.LogWarning($"No se encontró sprite para la carta {playerCardId}");
+                
+            playerCardImage.transform.rotation = Quaternion.Euler(0, 0, isPlayerCardInverted ? 180 : 0);
+        }
     }
 
     private void LoadPlayerMoves()
@@ -165,61 +194,137 @@ public class Combat : MonoBehaviour
 
     private void SetupEnemyCard()
     {
-        if (enemyDialogueText != null)
-            enemyDialogueText.text = enemyPhrase;
-
-       /*  if (enemyCardImage != null)
+        if (enemyCardImage != null)
         {
             Sprite cardSprite = Resources.Load<Sprite>($"Cartas/{enemyCardId}");
             if (cardSprite != null)
                 enemyCardImage.sprite = cardSprite;
             else
                 Debug.LogWarning($"No se encontró sprite para la carta {enemyCardId}");
-        } */
-    }
-
-    public void InvertCard()
-    {
-        isPlayerCardInverted = !isPlayerCardInverted;
-        LoadPlayerMoves();
-
-        if (playerCardImage != null)
-            playerCardImage.transform.rotation = Quaternion.Euler(0, 0, isPlayerCardInverted ? 180 : 0);
-    }
-
-    public void ChangeCard()
-    {
-        SelectRandomPlayerCard();
-
-        if (playerCardImage != null)
-        {
-            Sprite cardSprite = Resources.Load<Sprite>($"Cartas/{playerCardId}");
-            if (cardSprite != null)
-                playerCardImage.sprite = cardSprite;
         }
     }
 
-    public void Attack(int moveIndex)
+    private IEnumerator HandleInvertCard()
     {
-        if (moveIndex < 0 || moveIndex >= currentPlayerMoves.Count) return;
+        if (!isPlayerTurn) yield break;
+        
+        DisableAllButtons();
+        
+        // Mostrar mensaje de inversión
+        if (enemyDialogueText != null)
+            enemyDialogueText.text = "El jugador ha invertido la carta.";
+        
+        yield return new WaitForSecondsRealtime(messageDisplayTime);
+        
+        // Ejecutar inversión
+        isPlayerCardInverted = !isPlayerCardInverted;
+        LoadPlayerMoves();
+        UpdatePlayerCardUI();
+        
+        // Continuar con el turno del enemigo
+        yield return StartCoroutine(EnemyTurnCoroutine());
+    }
+
+    private IEnumerator HandleChangeCard()
+    {
+        if (!isPlayerTurn) yield break;
+        
+        DisableAllButtons();
+        
+        // Mostrar mensaje de cambio
+        if (enemyDialogueText != null)
+            enemyDialogueText.text = "El jugador ha cambiado de carta.";
+        
+        yield return new WaitForSecondsRealtime(messageDisplayTime);
+        
+        // Ejecutar cambio
+        SelectRandomPlayerCard();
+        
+        // Continuar con el turno del enemigo
+        yield return StartCoroutine(EnemyTurnCoroutine());
+    }
+
+    private IEnumerator HandleAttack(int moveIndex)
+    {
+        if (!isPlayerTurn || moveIndex < 0 || moveIndex >= currentPlayerMoves.Count) yield break;
+
+        DisableAllButtons();
 
         int moveId = currentPlayerMoves[moveIndex];
         var movimientos = getInfo.db.Query<Getinfo.movimientos>("SELECT * FROM movimientos WHERE id = ?", moveId);
-        if (movimientos.Count == 0) return;
+        if (movimientos.Count == 0) yield break;
 
         var movimiento = movimientos[0];
         int damage = CalculateDamage(movimiento);
+        
+        // Mostrar mensaje del ataque del jugador
+        string effectiveness = GetEffectivenessText(movimiento, enemyCardId);
+        if (enemyDialogueText != null)
+            enemyDialogueText.text = $"Has usado {movimiento.nombre}. {effectiveness}";
+        
+        yield return new WaitForSecondsRealtime(messageDisplayTime);
+        
         enemyHealth -= damage;
+        UpdateUI();
 
         if (enemyHealth <= 0)
         {
             enemyHealth = 0;
+            UpdateUI();
             EndCombat(true);
-            return;
+            yield break;
         }
 
-        EnemyTurn();
-        UpdateUI();
+        yield return StartCoroutine(EnemyTurnCoroutine());
+    }
+
+    private IEnumerator EnemyTurnCoroutine()
+    {
+        isPlayerTurn = false;
+
+        var cartas = getInfo.db.Query<Getinfo.cartas>("SELECT * FROM cartas WHERE id = ?", enemyCardId);
+        if (cartas.Count == 0) yield break;
+
+        var cartaEnemiga = cartas[0];
+        var sets = getInfo.db.Query<Getinfo.set_movimientos>("SELECT * FROM set_movimientos WHERE id = ?", cartaEnemiga.set_mov_normales);
+        if (sets.Count == 0) yield break;
+
+        var setEnemigo = sets[0];
+        List<int> enemyMoves = new List<int> { setEnemigo.mov1, setEnemigo.mov2, setEnemigo.mov3 };
+        int randomMoveId = enemyMoves[Random.Range(0, enemyMoves.Count)];
+        
+        var movimientos = getInfo.db.Query<Getinfo.movimientos>("SELECT * FROM movimientos WHERE id = ?", randomMoveId);
+
+        if (movimientos.Count > 0)
+        {
+            var movimientoEnemigo = movimientos[0];
+            int damage = CalculateEnemyDamage(movimientoEnemigo);
+            
+            // Mostrar mensaje del ataque enemigo
+            string effectiveness = GetEnemyEffectivenessText(movimientoEnemigo, playerCardId);
+            if (enemyDialogueText != null)
+                enemyDialogueText.text = $"El enemigo ha usado {movimientoEnemigo.nombre}. {effectiveness}";
+            
+            yield return new WaitForSecondsRealtime(messageDisplayTime);
+            
+            playerHealth -= damage;
+            UpdateUI();
+
+            if (playerHealth <= 0)
+            {
+                playerHealth = 0;
+                UpdateUI();
+                EndCombat(false);
+                yield break;
+            }
+        }
+
+        // Volver al turno del jugador
+        if (enemyDialogueText != null)
+            enemyDialogueText.text = enemyPhrase;
+            
+        EnableAllButtons();
+        isPlayerTurn = true;
     }
 
     private int CalculateDamage(Getinfo.movimientos movimiento)
@@ -233,40 +338,56 @@ public class Combat : MonoBehaviour
         return 20;
     }
 
-    private void EnemyTurn()
+    private int CalculateEnemyDamage(Getinfo.movimientos movimientoEnemigo)
     {
-        var cartas = getInfo.db.Query<Getinfo.cartas>("SELECT * FROM cartas WHERE id = ?", enemyCardId);
-        if (cartas.Count == 0) return;
-
-        var cartaEnemiga = cartas[0];
-        var sets = getInfo.db.Query<Getinfo.set_movimientos>("SELECT * FROM set_movimientos WHERE id = ?", cartaEnemiga.set_mov_normales);
-        if (sets.Count == 0) return;
-
-        var setEnemigo = sets[0];
-        List<int> enemyMoves = new List<int> { setEnemigo.mov1, setEnemigo.mov2, setEnemigo.mov3 };
-        int randomMoveId = enemyMoves[Random.Range(0, enemyMoves.Count)];
-        
-        var movimientos = getInfo.db.Query<Getinfo.movimientos>("SELECT * FROM movimientos WHERE id = ?", randomMoveId);
-
         int damage = 20;
-        if (movimientos.Count > 0)
+        var cartasJugador = getInfo.db.Query<Getinfo.cartas>("SELECT * FROM cartas WHERE id = ?", playerCardId);
+        if (cartasJugador.Count > 0)
         {
-            var movimientoEnemigo = movimientos[0];
-            var cartasJugador = getInfo.db.Query<Getinfo.cartas>("SELECT * FROM cartas WHERE id = ?", playerCardId);
-            if (cartasJugador.Count > 0)
-            {
-                if (movimientoEnemigo.fuerte_contra == playerCardId) damage = 40;
-                else if (movimientoEnemigo.debil_contra == playerCardId) damage = 10;
-            }
+            if (movimientoEnemigo.fuerte_contra == playerCardId) damage = 40;
+            else if (movimientoEnemigo.debil_contra == playerCardId) damage = 10;
         }
-        
-        playerHealth -= damage;
+        return damage;
+    }
 
-        if (playerHealth <= 0)
-        {
-            playerHealth = 0;
-            EndCombat(false);
-        }
+    private string GetEffectivenessText(Getinfo.movimientos movimiento, int targetCardId)
+    {
+        var cartas = getInfo.db.Query<Getinfo.cartas>("SELECT * FROM cartas WHERE id = ?", targetCardId);
+        if (cartas.Count == 0) return "Es efectivo.";
+
+        var cartaObjetivo = cartas[0];
+        if (movimiento.fuerte_contra == cartaObjetivo.id) return "¡Es muy efectivo!";
+        if (movimiento.debil_contra == cartaObjetivo.id) return "Es poco efectivo...";
+        return "Es efectivo.";
+    }
+
+    private string GetEnemyEffectivenessText(Getinfo.movimientos movimientoEnemigo, int playerCardId)
+    {
+        if (movimientoEnemigo.fuerte_contra == playerCardId) return "¡Es muy efectivo!";
+        if (movimientoEnemigo.debil_contra == playerCardId) return "Es poco efectivo...";
+        return "Es efectivo.";
+    }
+
+    private void DisableAllButtons()
+    {
+        foreach (var button in attackButtons)
+            if (button != null) button.interactable = false;
+        
+        if (invertButton != null)
+            invertButton.interactable = false;
+        if (changeCardButton != null)
+            changeCardButton.interactable = false;
+    }
+
+    private void EnableAllButtons()
+    {
+        foreach (var button in attackButtons)
+            if (button != null) button.interactable = true;
+        
+        if (invertButton != null)
+            invertButton.interactable = true;
+        if (changeCardButton != null)
+            changeCardButton.interactable = true;
     }
 
     private void UpdateUI()
@@ -279,10 +400,14 @@ public class Combat : MonoBehaviour
 
     private void EndCombat(bool playerWon)
     {
+        DisableAllButtons();
 
         if (playerWon)
         {
             Debug.Log("¡Victoria!");
+            if (enemyDialogueText != null)
+                enemyDialogueText.text = "¡Has ganado el combate!";
+                
             var nuevoProgreso = new Getinfo.progreso
             {
                 enemigo_id = enemyID,
@@ -293,9 +418,21 @@ public class Combat : MonoBehaviour
         else
         {
             Debug.Log("Derrota...");
+            if (enemyDialogueText != null)
+                enemyDialogueText.text = "Has sido derrotado...";
         }
 
+        StartCoroutine(EndCombatDelayed());
+    }
+
+    private IEnumerator EndCombatDelayed()
+    {
+        yield return new WaitForSecondsRealtime(messageDisplayTime);
+        
         var closefight = GetComponent<CloseFight>();
-        closefight.TerminarCombate();
+        if (closefight != null)
+            closefight.TerminarCombate();
+        else
+            Debug.LogError("No se encontró componente CloseFight");
     }
 }
