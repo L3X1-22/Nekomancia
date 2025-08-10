@@ -143,7 +143,7 @@ public class Combat : MonoBehaviour
     {
         if (playerCardImage != null)
         {
-            Sprite cardSprite = Resources.Load<Sprite>($"Cartas/{playerCardId}");
+            Sprite cardSprite = LoadCardSprite(playerCardId);
             if (cardSprite != null)
                 playerCardImage.sprite = cardSprite;
             else
@@ -196,7 +196,7 @@ public class Combat : MonoBehaviour
     {
         if (enemyCardImage != null)
         {
-            Sprite cardSprite = Resources.Load<Sprite>($"Cartas/{enemyCardId}");
+            Sprite cardSprite = LoadCardSprite(enemyCardId);
             if (cardSprite != null)
                 enemyCardImage.sprite = cardSprite;
             else
@@ -388,6 +388,68 @@ public class Combat : MonoBehaviour
             invertButton.interactable = true;
         if (changeCardButton != null)
             changeCardButton.interactable = true;
+    }
+
+    private Sprite LoadCardSprite(int cardId)
+    {
+        // Consultar el nombre de la carta desde la base de datos
+        var cartas = getInfo.db.Query<Getinfo.cartas>("SELECT * FROM cartas WHERE id = ?", cardId);
+        if (cartas.Count == 0)
+        {
+            Debug.LogError($"No se encontró carta con ID {cardId} en la base de datos");
+            return null;
+        }
+
+        var carta = cartas[0];
+        string cardName = carta.nombre.ToLower(); // Convertir a minúsculas
+        
+        // Construir la ruta: Sprites/Baraja/WGJ Nekomancia [nombre]
+        string spritePath = $"Sprites/Baraja/WGJ Nekomancia {cardName}";
+        
+        Debug.Log($"Intentando cargar sprite: {spritePath}");
+        
+        Sprite cardSprite = Resources.Load<Sprite>(spritePath);
+        
+        // Si no encontró el sprite, intentar con variaciones comunes
+        if (cardSprite == null)
+        {
+            Debug.LogWarning($"No se encontró sprite en: {spritePath}");
+            
+            // Intentar sin "la/el" al inicio
+            string[] variations = {
+                cardName.Replace("la ", "").Replace("el ", ""),
+                cardName.Replace("la sacerdotisa", "sacerdotisa"),
+                cardName.Replace("el colgado", "colgado"),
+                cardName.Replace("el loco", "loco"),
+                cardName.Replace("la muerte", "muerte"),
+                cardName.Replace("el mago", "mago"),
+                cardName.Replace("la emperatriz", "emperatriz"),
+                cardName.Replace("el emperador", "emperador")
+            };
+            
+            foreach (string variation in variations)
+            {
+                if (variation != cardName) // Solo probar si es diferente
+                {
+                    string variationPath = $"Sprites/Baraja/WGJ Nekomancia {variation}";
+                    Debug.Log($"Probando variación: {variationPath}");
+                    cardSprite = Resources.Load<Sprite>(variationPath);
+                    if (cardSprite != null)
+                    {
+                        Debug.Log($"¡Sprite encontrado con variación: {variationPath}");
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if (cardSprite == null)
+        {
+            Debug.LogError($"No se pudo cargar sprite para carta ID {cardId} (nombre: {carta.nombre})");
+            Debug.LogError("Verifica que el archivo existe en Resources/Sprites/Baraja/ y que el nombre coincida");
+        }
+            
+        return cardSprite;
     }
 
     private void UpdateUI()
