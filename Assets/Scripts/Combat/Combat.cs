@@ -15,6 +15,8 @@ public class Combat : MonoBehaviour
     [Header("UI Imágenes")]
     public Image playerCardImage;
     public Image enemyCardImage;
+    public Image enemyImage;
+    public Image playerImage;
 
     [Header("Botones")]
     public Button[] attackButtons = new Button[3];
@@ -67,6 +69,21 @@ public class Combat : MonoBehaviour
 
     public void StartCombat(string[] datosCombate)
     {
+switch (enemyID)
+{
+    case 1:
+        enemyImage.sprite = Resources.Load<Sprite>("Sprites/enemies/Wizard");
+        playerImage.sprite = Resources.Load<Sprite>("Sprites/character/Idle");
+        break;
+    case 2:
+        enemyImage.sprite = Resources.Load<Sprite>("Sprites/enemies/Priestess");
+        playerImage.sprite = Resources.Load<Sprite>("Sprites/character/Idle");
+        break;
+    case 3:
+        enemyImage.sprite = Resources.Load<Sprite>("Sprites/enemies/Hermit");
+        playerImage.sprite = Resources.Load<Sprite>("Sprites/character/Idle");
+        break;
+}
         if (datosCombate.Length < 2)
         {
             Debug.LogError("Datos de combate inválidos");
@@ -186,10 +203,16 @@ public class Combat : MonoBehaviour
         currentPlayerMoves.Clear();
 
         var cartas = getInfo.db.Query<Getinfo.cartas>("SELECT * FROM cartas WHERE id = ?", playerCardId);
-        if (cartas.Count == 0) return;
+        if (cartas.Count == 0) 
+        {
+            Debug.LogError($"No se encontró carta con ID {playerCardId}");
+            return;
+        }
 
         var carta = cartas[0];
         int setId = isPlayerCardInverted ? carta.set_mov_invertidos : carta.set_mov_normales;
+        
+        Debug.Log($"Cargando movimientos para carta {playerCardId}, Set ID: {setId}, Invertida: {isPlayerCardInverted}");
         
         var sets = getInfo.db.Query<Getinfo.set_movimientos>("SELECT * FROM set_movimientos WHERE id = ?", setId);
         if (sets.Count > 0)
@@ -198,19 +221,42 @@ public class Combat : MonoBehaviour
             currentPlayerMoves.AddRange(new[] { set.mov1, set.mov2, set.mov3 });
         }
 
+        // Actualizar los textos de los botones
         for (int i = 0; i < attackButtons.Length; i++)
         {
-            if (i < currentPlayerMoves.Count)
+            if (i < currentPlayerMoves.Count && currentPlayerMoves[i] > 0)
             {
                 var movimientos = getInfo.db.Query<Getinfo.movimientos>("SELECT * FROM movimientos WHERE id = ?", currentPlayerMoves[i]);
                 if (movimientos.Count > 0)
                 {
                     var move = movimientos[0];
-                    var btnText = attackButtons[i].GetComponentInChildren<TMP_Text>();
-                    if (btnText != null)
-                        btnText.text = move.nombre;
+                    
+                    // Buscar Text component (Legacy Text)
+                    Text legacyText = attackButtons[i].GetComponentInChildren<Text>();
+                    // Buscar TMP_Text component (TextMeshPro)
+                    TMP_Text tmpText = attackButtons[i].GetComponentInChildren<TMP_Text>();
+                    
+                    if (legacyText != null)
+                    {
+                        legacyText.text = move.nombre;
+                        Debug.Log($"Botón {i}: {move.nombre} (Legacy Text)");
+                    }
+                    else if (tmpText != null)
+                    {
+                        tmpText.text = move.nombre;
+                        Debug.Log($"Botón {i}: {move.nombre} (TMP Text)");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"No se encontró componente Text ni TMP_Text en el botón {i}");
+                    }
 
                     attackButtons[i].gameObject.SetActive(true);
+                }
+                else
+                {
+                    Debug.LogWarning($"No se encontró movimiento con ID {currentPlayerMoves[i]}");
+                    attackButtons[i].gameObject.SetActive(false);
                 }
             }
             else

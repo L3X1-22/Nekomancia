@@ -185,6 +185,8 @@ MonoBehaviour:
   enemyDialogueText: {fileID: 1540122876}
   playerCardImage: {fileID: 197855100}
   enemyCardImage: {fileID: 1098357557}
+  enemyImage: {fileID: 0}
+  playerImage: {fileID: 0}
   attackButtons:
   - {fileID: 1763155606}
   - {fileID: 2082920983}
@@ -1376,7 +1378,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 4723107735738678597, guid: b1d7665209d9ef347a68f38c10f89552, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1609,6 +1611,8 @@ MonoBehaviour:
   enemyDialogueText: {fileID: 1540122876}
   playerCardImage: {fileID: 197855100}
   enemyCardImage: {fileID: 1098357557}
+  enemyImage: {fileID: 2029619182}
+  playerImage: {fileID: 735752032}
   attackButtons:
   - {fileID: 1763155606}
   - {fileID: 2082920983}
@@ -2765,6 +2769,8 @@ MonoBehaviour:
   enemyDialogueText: {fileID: 1540122876}
   playerCardImage: {fileID: 197855100}
   enemyCardImage: {fileID: 1098357557}
+  enemyImage: {fileID: 0}
+  playerImage: {fileID: 0}
   attackButtons:
   - {fileID: 1763155606}
   - {fileID: 2082920983}
